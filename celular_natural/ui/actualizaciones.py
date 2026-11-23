@@ -444,7 +444,7 @@ class ControladorActualizaciones(QObject):
             act.registrar("Búsqueda: las actualizaciones no están configuradas (falta el Client ID).")
             self._fin_prueba()
             return
-        if act.cargar_sesion() is None:
+        if act.necesita_conectar():
             if self._auto:
                 self.conectar()
             elif not configuracion().value(CLAVE_NO_PEDIR, False, type=bool) and not self.banner.isVisible():
@@ -486,7 +486,7 @@ class ControladorActualizaciones(QObject):
                            "Esta copia de NaturalShot todavía no tiene configuradas las actualizaciones "
                            "automáticas (falta el Client ID de la GitHub App). Mirá el README.")
             return
-        if act.cargar_sesion() is None:
+        if act.necesita_conectar():
             self.conectar()
             return
         self._manual = manual
@@ -699,7 +699,7 @@ class ControladorActualizaciones(QObject):
             cuenta = menu.addAction(f"Cuenta de GitHub: @{usuario}" if usuario else "Cuenta de GitHub conectada")
             cuenta.setEnabled(False)
             menu.addAction(iconos.icono("log-out", 16), "Desconectar la cuenta de GitHub", self.desconectar)
-        elif act.configurado():
+        elif act.configurado() and not act.publico():
             menu.addAction(iconos.icono("log-in", 16), "Conectar con GitHub…", self.conectar)
         menu.addAction(iconos.icono("external-link", 16), "Abrir la página de versiones", self.abrir_pagina)
         menu.exec(self.boton_version.mapToGlobal(self.boton_version.rect().bottomLeft()))

@@ -57,7 +57,7 @@ TOKEN = "ghu_tokenDePrueba123456"
 # __version__ antes de correr las pruebas, así que no puede ser un número fijo).
 _A, _B, _C = act.interpretar_version(__version__)
 NUEVA = f"{_A}.{_B}.{_C + 1}"
-VARIABLES = ("APPDATA", act.VAR_API, act.VAR_LOGIN, act.VAR_CLIENT_ID, act.VAR_AUTO, act.VAR_FALLA)
+VARIABLES = ("APPDATA", act.VAR_API, act.VAR_LOGIN, act.VAR_CLIENT_ID, act.VAR_AUTO, act.VAR_FALLA, act.VAR_PUBLICO)
 
 
 def _puerto_cerrado() -> int:
@@ -74,6 +74,7 @@ class _ConEntorno(unittest.TestCase):
         self.carpeta = Path(tempfile.mkdtemp(prefix="ns_act_"))
         os.environ["APPDATA"] = str(self.carpeta / "appdata")
         os.environ[act.VAR_CLIENT_ID] = "Iv23liPrueba"
+        os.environ[act.VAR_PUBLICO] = "0"  # casi todas las pruebas son del repositorio privado (con cuenta)
         os.environ.pop(act.VAR_AUTO, None)
         os.environ.pop(act.VAR_FALLA, None)
         self.servidor = ServidorGitHubFalso(TOKEN)
@@ -329,6 +330,36 @@ class PruebasDescarga(_ConEntorno):
 
 
 # ====================================================================== device flow
+class PruebasRepositorioPublico(_ConEntorno):
+    """Con un repositorio público se busca y se baja sin cuenta de GitHub (y sin mandar Authorization)."""
+
+    def setUp(self):
+        super().setUp()
+        os.environ[act.VAR_PUBLICO] = "1"
+        os.environ[act.VAR_CLIENT_ID] = act.CLIENT_ID  # sin GitHub App: igual queda configurado
+        self.servidor.publico = True
+
+    def test_busca_y_descarga_sin_cuenta(self):
+        self.assertTrue(act.configurado())
+        self.assertFalse(act.necesita_conectar())
+        datos = zip_de_prueba()
+        self.servidor.publicar("1.0.1", datos)
+        novedad = act.buscar_actualizacion("1.0.0")
+        self.assertEqual(novedad.version, "1.0.1")
+        destino = self.carpeta / "bajada"
+        destino.mkdir()
+        self.assertEqual(act.descargar_paquete(novedad, destino).read_bytes(), datos)
+        self.assertTrue(self.servidor.pedidos)
+        for p in self.servidor.pedidos:
+            self.assertNotIn("authorization", p["encabezados"])
+
+    def test_privado_sin_sesion_pide_conectar(self):
+        os.environ[act.VAR_PUBLICO] = "0"
+        self.assertTrue(act.necesita_conectar())
+        with self.assertRaises(act.SinSesion):
+            act.buscar_actualizacion("1.0.0")
+
+
 class PruebasDeviceFlow(_ConEntorno):
     def codigo(self, intervalo=5, expira=900):
         self.servidor.respuesta_codigo = dict(self.servidor.respuesta_codigo, interval=intervalo, expires_in=expira)

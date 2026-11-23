@@ -24,7 +24,7 @@ import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
-REPO = "Zergeeenk/naturalshot-releases"
+from celular_natural.actualizador import REPOSITORIO as REPO
 
 
 def zip_de_prueba(raiz: str = "NaturalShot PRO", contenido_exe: bytes = b"MZ exe de prueba",
@@ -69,6 +69,7 @@ class ServidorGitHubFalso:
         self.expira = 28800
         self.estado_release: Optional[int] = None  # forzar 403/404 en releases/latest
         self.limite_agotado = False
+        self.publico = False  # True: releases y assets responden sin Authorization (repositorio público)
         self.pedidos: list[dict] = []
         self.violaciones: list[str] = []  # Authorization reenviado a la URL firmada
         self._candado = threading.Lock()
@@ -154,7 +155,8 @@ class ServidorGitHubFalso:
                     return self._responder(403, {"message": "API rate limit exceeded"},
                                            extra={"X-RateLimit-Remaining": "0"})
                 token = self._token()
-                if token not in servidor.tokens_validos:
+                anonimo = servidor.publico and token is None and ruta != "/user"
+                if token not in servidor.tokens_validos and not anonimo:
                     return self._responder(401, {"message": "Bad credentials"})
                 if ruta == "/user":
                     return self._responder(200, {"login": "editora-prueba"})

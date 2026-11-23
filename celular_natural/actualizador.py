@@ -63,8 +63,12 @@ from . import __version__
 from .motor import Cancelado
 
 # ------------------------------------------------------------------ configuración
-# Repositorio PRIVADO con las versiones compiladas (sin el código). Cambiarlo acá alcanza.
-REPOSITORIO = "Zergeeenk/naturalshot-releases"
+# Repositorio con las versiones compiladas. Cambiarlo acá alcanza. El definitivo es el privado del
+# dueño (Zergeeenk/naturalshot-releases); mientras prueban, las versiones salen del repo del equipo.
+REPOSITORIO = "nicodevgames/naturalshotNCK"
+# True si ese repositorio es PÚBLICO: se buscan y bajan las versiones sin conectar ninguna cuenta de
+# GitHub (no hace falta la GitHub App ni el Client ID). Con un repositorio privado, False.
+REPOSITORIO_PUBLICO = True
 # Client ID de la GitHub App del dueño (Settings > Developer settings > GitHub Apps >
 # la app > "Client ID", empieza con "Iv"). Es público: no es un secreto. Mientras tenga
 # este valor de relleno, las actualizaciones quedan desactivadas (ver README).
@@ -95,6 +99,7 @@ VAR_LOGIN = "NATURALSHOT_LOGIN_BASE"
 VAR_CLIENT_ID = "NATURALSHOT_CLIENT_ID"
 VAR_AUTO = "NATURALSHOT_PRUEBA_ACTUALIZAR_AUTO"
 VAR_FALLA = "NATURALSHOT_PRUEBA_FALLA_COPIA"
+VAR_PUBLICO = "NATURALSHOT_REPOSITORIO_PUBLICO"  # =1 / =0 reemplaza REPOSITORIO_PUBLICO (pruebas)
 
 AGENTE = f"NaturalShot-PRO/{__version__}"
 
@@ -166,9 +171,20 @@ def client_id() -> str:
     return os.environ.get(VAR_CLIENT_ID) or CLIENT_ID
 
 
+def publico() -> bool:
+    """True si las versiones se bajan sin cuenta de GitHub (repositorio público)."""
+    valor = os.environ.get(VAR_PUBLICO)
+    return REPOSITORIO_PUBLICO if valor is None else valor == "1"
+
+
 def configurado() -> bool:
-    """False mientras ``CLIENT_ID`` tenga el valor de relleno."""
-    return "RELLENO" not in client_id()
+    """Con un repositorio público, siempre. Con uno privado, False mientras ``CLIENT_ID`` sea el de relleno."""
+    return publico() or "RELLENO" not in client_id()
+
+
+def necesita_conectar() -> bool:
+    """True si hay que conectar una cuenta de GitHub antes de buscar (privado y sin sesión guardada)."""
+    return not publico() and cargar_sesion() is None
 
 
 def plataforma_con_actualizaciones() -> bool:
@@ -754,6 +770,8 @@ def _con_sesion(funcion: Callable[[Sesion], object], sesion: Optional[Sesion]):
     """Ejecuta ``funcion(sesion)``; si GitHub dice 401 y hay refresh token, renueva y reintenta una vez."""
     if sesion is None:
         sesion = sesion_vigente()
+        if sesion is None and publico():
+            return funcion(Sesion(token=""))  # repositorio público: sin Authorization
         if sesion is None:
             raise SinSesion("Conectá tu cuenta de GitHub para recibir actualizaciones.")
     try:
