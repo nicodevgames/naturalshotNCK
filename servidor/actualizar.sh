@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Trae los cambios de main y, si hay, reconstruye NaturalShot en el navegador (lo corre un timer cada 10 min).
 set -euo pipefail
+# Una sola actualización a la vez (el timer y una corrida a mano pueden coincidir): la segunda espera.
+exec 9>/run/naturalshot-actualizar.lock
+flock 9
 DIR=/opt/naturalshot
 CONF=/srv/naturalshot/config/servidor.env
 . "$CONF"
