@@ -1,0 +1,44 @@
+# NaturalShot: el link con usuario y contraseña (portal + app en el navegador). Lo levanta instalar.sh.
+name: naturalshot
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: servidor/app/Dockerfile
+    restart: unless-stopped
+    shm_size: "1gb"
+    volumes:
+      - /srv/naturalshot/datos:/root/NaturalShot
+      - /srv/naturalshot/config:/root/.config
+
+  portal:
+    build: ./portal
+    restart: unless-stopped
+    environment:
+      GITHUB_REPO: ${GITHUB_REPO}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      DOMINIO: ${DOMINIO}
+      DATOS: /datos
+    volumes:
+      - /srv/naturalshot/datos:/datos
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO}
+      USUARIO: ${USUARIO}
+      CLAVE_HASH: ${CLAVE_HASH}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data
+      - caddy_config:/config
+    depends_on: [portal, app]
+
+volumes:
+  caddy_datos:
+  caddy_config:

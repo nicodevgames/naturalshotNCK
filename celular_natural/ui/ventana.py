@@ -1076,13 +1076,23 @@ class VentanaPrincipal(QMainWindow):
         return caja
 
     def mostrar_tutorial(self) -> None:
-        """Abre la guía de uso adentro de la app."""
-        from .tutorial import DialogoTutorial
+        """Abre la guía de uso adentro de la app. Sin el visor de PDF de Qt (QtPdf no viene en
+        PySide6-Essentials de Linux ni de Mac), la abre con el visor de PDF de la computadora."""
+        try:
+            from .tutorial import DialogoTutorial
+        except ImportError:
+            from PySide6.QtCore import QUrl
+            from PySide6.QtGui import QDesktopServices
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(edicion.ruta_recurso("assets/tutorial.pdf"))))
+            return
         DialogoTutorial(self).exec()
 
     def mostrar_tutorial_si_corresponde(self) -> None:
         """Al abrir la app: muestra el tutorial hasta que se tilde "No volver a mostrar"."""
-        from .tutorial import debe_mostrarse_al_iniciar
+        try:
+            from .tutorial import debe_mostrarse_al_iniciar
+        except ImportError:
+            return  # sin QtPdf no se abre solo al iniciar: queda el botón del libro y F1
         if debe_mostrarse_al_iniciar():
             self.mostrar_tutorial()
 

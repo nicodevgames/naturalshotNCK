@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NaturalShot PRO</title>
+<style>
+  :root { --bg: #0f0d14; --card: #1a1720; --line: rgba(255,255,255,.1); --ink: #efedf3; --dim: #a29fac; --acc: #cf3f88; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, "Segoe UI", Inter, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 80px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  .dim { color: var(--dim); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-top: 16px; }
+  .btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 16px; margin-top: 8px; border-radius: 10px;
+         border: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; text-decoration: none; cursor: pointer; }
+  .btn:hover { border-color: var(--acc); }
+  .btn.principal { background: var(--acc); border-color: var(--acc); font-weight: 600; }
+  .btn .tam { margin-left: auto; color: var(--dim); font-size: 13px; }
+  .btn.principal .tam { color: rgba(255,255,255,.8); }
+  .nota { font-size: 13px; color: var(--dim); margin-top: 10px; }
+  ul.archivos { list-style: none; padding: 0; margin: 8px 0 0; }
+  ul.archivos li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  ul.archivos a { color: var(--ink); word-break: break-all; }
+  pre { white-space: pre-wrap; font: inherit; color: var(--dim); margin: 8px 0 0; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>NaturalShot PRO</h1>
+  <div class="dim">El editor de fotos, video y audio. Usalo en el navegador o instalalo en tu compu.</div>
+
+  <section class="card">
+    <h2>▶ Usar en el navegador</h2>
+    <div class="dim">Sin instalar nada. Corre en nuestro servidor: ideal para probar.</div>
+    <a class="btn principal" href="{{APP}}" target="_blank" rel="noopener">Abrir NaturalShot en el navegador</a>
+    <div class="nota">Para editar una foto o un video: subilo abajo, en <b>Tus archivos</b>, y abrilo en la app desde la
+      carpeta <b>NaturalShot › Entradas</b>. Al exportar, guardalo en <b>NaturalShot › Exportados</b> y bajalo desde acá.</div>
+  </section>
+
+  <section class="card">
+    <h2>⬇ Descargar para tu compu</h2>
+    <div class="dim" id="version">Buscando la última versión…</div>
+    <div id="descargas"></div>
+    <div class="nota" id="ayuda"></div>
+    <pre id="notas"></pre>
+  </section>
+
+  <section class="card">
+    <h2>📁 Tus archivos (para la versión del navegador)</h2>
+    <label class="btn" for="subir">⬆ Subir fotos o videos a Entradas</label>
+    <input id="subir" type="file" multiple>
+    <div class="nota" id="estado"></div>
+    <div class="dim" style="margin-top:14px">Exportados (lo que guardaste en la app):</div>
+    <ul class="archivos" id="exportados"><li class="dim">Todavía no hay nada.</li></ul>
+  </section>
+</main>
+<script>
+const NOMBRES = {
+  'NaturalShot-PRO-windows.zip': ['windows', 'Windows'],
+  'NaturalShot-PRO-mac-apple.dmg': ['mac', 'Mac con chip Apple (M1, M2, M3, M4)'],
+  'NaturalShot-PRO-mac-intel.dmg': ['mac', 'Mac con Intel'],
+};
+const ua = navigator.userAgent + ' ' + navigator.platform;
+const compu = /iphone|ipad|android/i.test(ua) ? 'otra' : /win/i.test(ua) ? 'windows' : /mac/i.test(ua) ? 'mac' : 'otra';
+const tam = (b) => !b ? '' : b > 1073741824 ? (b / 1073741824).toFixed(1).replace('.', ',') + ' GB' : Math.max(1, Math.round(b / 1048576)) + ' MB';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function version() {
+  const d = await (await fetch('/api/version')).json();
+  const v = document.getElementById('version');
+  if (!d.ok) { v.textContent = d.motivo; return; }
+  v.innerHTML = `<b>${esc(d.version)}</b>` + (d.fecha ? ` · ${new Date(d.fecha).toLocaleDateString('es-AR')}` : '');
+  const archivos = d.archivos.filter((a) => NOMBRES[a.nombre])
+    .sort((a, b) => (NOMBRES[b.nombre][0] === compu) - (NOMBRES[a.nombre][0] === compu));
+  document.getElementById('descargas').innerHTML = archivos.map((a, i) =>
+    `<a class="btn ${i === 0 && NOMBRES[a.nombre][0] === compu ? 'principal' : ''}" href="/descargar/${encodeURIComponent(a.nombre)}">
+       ⬇ ${esc(NOMBRES[a.nombre][1])}<span class="tam">${tam(a.tamano)}</span></a>`).join('') || '<div class="nota">Esta versión no tiene archivos para bajar.</div>';
+  document.getElementById('ayuda').innerHTML =
+    '<b>Windows:</b> descomprimí el zip y abrí <code>NaturalShot.exe</code>. ' +
+    '<b>Mac:</b> abrí el .dmg, arrastrá NaturalShot a Aplicaciones y la primera vez abrila con <b>clic derecho › Abrir</b>.';
+  document.getElementById('notas').textContent = '';
+}
+
+async function exportados() {
+  const lista = await (await fetch('/api/archivos')).json();
+  document.getElementById('exportados').innerHTML = lista.length ? lista.map((a) =>
+    `<li><a href="${a.url}">${esc(a.nombre)}</a><span class="dim">${tam(a.tamano)}</span></li>`).join('')
+    : '<li class="dim">Todavía no hay nada.</li>';
+}
+
+document.getElementById('subir').addEventListener('change', async (e) => {
+  const estado = document.getElementById('estado');
+  for (const f of e.target.files) {
+    estado.textContent = `Subiendo ${f.name}…`;
+    const r = await fetch('/subir/' + encodeURIComponent(f.name), { method: 'PUT', body: f });
+    estado.textContent = r.ok ? `Listo: ${f.name} está en NaturalShot › Entradas.` : `No se pudo subir ${f.name}.`;
+  }
+  e.target.value = '';
+});
+
+version().catch(() => { document.getElementById('version').textContent = 'No se pudo consultar la versión.'; });
+exportados();
+setInterval(exportados, 15000);
+</script>
+</body>
+</html>

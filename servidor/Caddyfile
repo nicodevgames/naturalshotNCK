@@ -1,0 +1,14 @@
+# HTTPS automático (Let's Encrypt) y usuario y contraseña para las dos direcciones.
+{$DOMINIO} {
+	basic_auth {
+		{$USUARIO} {$CLAVE_HASH}
+	}
+	reverse_proxy portal:8000
+}
+
+app.{$DOMINIO} {
+	basic_auth {
+		{$USUARIO} {$CLAVE_HASH}
+	}
+	reverse_proxy app:14500
+}
