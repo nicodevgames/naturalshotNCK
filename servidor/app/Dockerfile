@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN wget -qO- https://github.com/Xpra-org/xpra-html5/archive/refs/tags/v21.tar.gz | tar -xz -C /tmp \
     && mv /tmp/xpra-html5-21/html5 /opt/xpra-html5 && rm -rf /tmp/xpra-html5-21
 
+# Las fuentes de Windows que pide la app, reemplazadas por otras de medidas parecidas (si no, se cortan textos).
+COPY servidor/app/fuentes.conf /etc/fonts/local.conf
+
 WORKDIR /app
 COPY requirements.txt .
 RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
