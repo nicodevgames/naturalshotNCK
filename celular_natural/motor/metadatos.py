@@ -9,8 +9,9 @@ Qué hace con el EXIF del original:
   de cámara y lente, el dueño de la cámara, el nombre de la PC, el nombre del documento,
   el identificador único de la foto, la nota del fabricante (``MakerNote``, donde las
   cámaras guardan seriales y datos internos) y los campos de Windows con autor o
-  comentarios (``XPAuthor``, ``XPComment``). Una descripción que es una ruta de archivo
-  (``C:\\Users\\...``, ``/home/...``) también se quita.
+  comentarios (``XPAuthor``, ``XPComment``, ``XPTitle``, ``XPKeywords``, ``XPSubject``). También
+  los nombres de personas y los textos libres: ``Artist``, ``Copyright``, ``UserComment`` e
+  ``ImageDescription`` (pueden decir quién es, dónde está o de quién es la foto).
 * **Coherencia con la foto editada**: la orientación sale como 1 (los píxeles ya vienen
   girados al cargarla), las dimensiones (``PixelXDimension``/``PixelYDimension``) son las
   reales del archivo exportado y no se copia la miniatura del original (mostraría la foto
@@ -37,6 +38,11 @@ TAG_DOCUMENTO = 0x010D
 TAG_PC = 0x013C  # HostComputer
 TAG_XP_COMENTARIO = 0x9C9C
 TAG_XP_AUTOR = 0x9C9D
+TAG_ARTISTA = 0x013B  # Artist: el nombre de quien sacó la foto
+TAG_COPYRIGHT = 0x8298  # Copyright: casi siempre el nombre de la persona
+TAG_XP_TITULO = 0x9C9B  # XPTitle (Windows)
+TAG_XP_PALABRAS = 0x9C9E  # XPKeywords (Windows)
+TAG_XP_ASUNTO = 0x9C9F  # XPSubject (Windows)
 IFD_EXIF = 0x8769
 IFD_GPS = 0x8825
 # IFD de EXIF
@@ -47,15 +53,21 @@ TAG_ID_UNICO = 0xA420  # ImageUniqueID
 TAG_DUENO = 0xA430  # CameraOwnerName
 TAG_SERIE_CUERPO = 0xA431  # BodySerialNumber
 TAG_SERIE_LENTE = 0xA435  # LensSerialNumber
+TAG_COMENTARIO = 0x9286  # UserComment: texto libre (puede decir dónde o de quién es)
 
-QUITAR_IFD0 = (TAG_DOCUMENTO, TAG_PC, TAG_XP_COMENTARIO, TAG_XP_AUTOR, TAG_ORIENTACION)
-QUITAR_EXIF = (TAG_NOTA_FABRICANTE, TAG_ID_UNICO, TAG_DUENO, TAG_SERIE_CUERPO, TAG_SERIE_LENTE)
+# Los textos libres y los nombres de personas salen siempre: pueden decir quién es, dónde está o
+# de quién es la foto. ImageDescription también, aunque no sea una ruta.
+QUITAR_IFD0 = (TAG_DOCUMENTO, TAG_PC, TAG_XP_COMENTARIO, TAG_XP_AUTOR, TAG_XP_TITULO, TAG_XP_PALABRAS,
+               TAG_XP_ASUNTO, TAG_ARTISTA, TAG_COPYRIGHT, TAG_DESCRIPCION, TAG_ORIENTACION)
+QUITAR_EXIF = (TAG_NOTA_FABRICANTE, TAG_ID_UNICO, TAG_DUENO, TAG_SERIE_CUERPO, TAG_SERIE_LENTE, TAG_COMENTARIO)
 
 NOMBRES = {
     IFD_GPS: "GPS (ubicación)", TAG_DOCUMENTO: "DocumentName", TAG_PC: "HostComputer",
     TAG_XP_COMENTARIO: "XPComment", TAG_XP_AUTOR: "XPAuthor", TAG_NOTA_FABRICANTE: "MakerNote",
     TAG_ID_UNICO: "ImageUniqueID", TAG_DUENO: "CameraOwnerName", TAG_SERIE_CUERPO: "BodySerialNumber",
-    TAG_SERIE_LENTE: "LensSerialNumber", TAG_DESCRIPCION: "ImageDescription (ruta de archivo)",
+    TAG_SERIE_LENTE: "LensSerialNumber", TAG_DESCRIPCION: "ImageDescription",
+    TAG_ARTISTA: "Artist", TAG_COPYRIGHT: "Copyright", TAG_XP_TITULO: "XPTitle", TAG_XP_PALABRAS: "XPKeywords",
+    TAG_XP_ASUNTO: "XPSubject", TAG_COMENTARIO: "UserComment",
 }
 
 _RUTA = re.compile(r"(^[a-zA-Z]:[\\/])|(^\\\\)|(^/(home|users|Users|mnt|media|tmp|var)/)")
@@ -83,8 +95,6 @@ def limpiar_exif(exif: Optional[bytes], ancho: int, alto: int) -> Optional[bytes
     e.load(exif)
     for tag in QUITAR_IFD0:
         e.pop(tag, None)
-    if es_ruta(e.get(TAG_DESCRIPCION)):
-        del e[TAG_DESCRIPCION]
     # GPS: fuera el bloque entero (Pillow lo vuelve a escribir si queda la entrada o el IFD cargado).
     e.pop(IFD_GPS, None)
     try:
@@ -134,8 +144,6 @@ def auditar_imagen(ruta) -> list[str]:
         for tag in QUITAR_IFD0:
             if tag != TAG_ORIENTACION and tag in e:
                 problemas.append(f"Tiene {NOMBRES[tag]}")
-        if es_ruta(e.get(TAG_DESCRIPCION)):
-            problemas.append(f"Tiene {NOMBRES[TAG_DESCRIPCION]}")
         sub = e.get_ifd(IFD_EXIF)
         for tag in QUITAR_EXIF:
             if tag in sub:

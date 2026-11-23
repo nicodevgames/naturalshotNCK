@@ -19,15 +19,17 @@ identidad de una cámara o un celular. La app no escribe XMP ni IPTC.
 | `BodySerialNumber`, `LensSerialNumber` | Se quitan | Privacidad: identifican el equipo de una persona |
 | `CameraOwnerName` | Se quita | Privacidad |
 | `HostComputer`, `DocumentName` | Se quitan | Privacidad: el nombre de la PC y del archivo |
-| `XPAuthor`, `XPComment` (Windows) | Se quitan | Privacidad: autor y comentarios personales |
+| `XPAuthor`, `XPComment`, `XPTitle`, `XPKeywords`, `XPSubject` (Windows) | Se quitan | Privacidad: autor, títulos y comentarios personales |
+| `Artist`, `Copyright` | Se quitan | Privacidad: casi siempre el nombre real de quien sacó la foto |
+| `UserComment`, `ImageDescription` | Se quitan (siempre, no solo si es una ruta) | Privacidad: texto libre, puede decir dónde o de quién es la foto |
 | `ImageUniqueID` | Se quita | Privacidad: liga la exportada con el original |
 | `MakerNote` | Se quita | Privacidad: ahí las cámaras guardan seriales y datos internos |
-| `ImageDescription` con una ruta (`C:\Users\…`, `/home/…`) | Se quita | Privacidad: la ruta de la PC |
 | `Orientation` | Sale como 1 (no se escribe) | Los píxeles ya vienen girados al abrir la foto |
 | `PixelXDimension`, `PixelYDimension` | Se escriben con el tamaño real | Coherencia tras recortar o reescalar |
 | Miniatura EXIF (IFD1) | No se copia | Mostraría la foto de antes de editar |
 | Perfil ICC | Se conserva (o sRGB si no tenía) | Los colores se ven igual en cualquier programa |
-| `Make`, `Model`, `Software`, fechas, exposición y el resto | Se conservan tal cual | Es lo que la casilla promete ("Copia fecha, cámara y demás datos") |
+| `Make`, `Model`, `Software`, fechas, exposición y el resto técnico | Se conservan tal cual | Es lo que la casilla promete ("Copia fecha, cámara y demás datos") |
+| XMP, IPTC, textos de PNG (prompts de ComfyUI, comentarios) | No se copian nunca | La app arma el archivo desde los píxeles y solo escribe el EXIF de arriba |
 
 Sin la casilla marcada, la foto sale sin ningún EXIF (solo el perfil ICC).
 
@@ -54,6 +56,21 @@ Sin la casilla marcada, la foto sale sin ningún EXIF (solo el perfil ICC).
 | Solo el sonido de un video | `exportar_sonido` | `celular_natural/motor/video.py` | Ninguno del original |
 | Audio (M4A/MP3/WAV) | `exportar_audio` | `celular_natural/motor/audio.py` | Ninguno del original |
 | Proyecto de audio | `exportar_proyecto` | `celular_natural/motor/proyecto_audio.py` | Ninguno del original |
+
+## Fuera del alcance
+
+Esta política es de privacidad. La app **no** agrega, quita, falsifica ni intenta romper
+marcas de procedencia o de contenido generado con IA (C2PA, SynthID, IPTC "Digital Source
+Type"): las plataformas piden declarar lo hecho con IA, y esconderlo es motivo de baja de
+cuentas.
+
+## Otros cuidados (no son metadatos)
+
+* **El nombre del archivo exportado** sale del nombre del original (`IMG_0001_celular.jpg`). Si el
+  original se llama con el nombre de alguien, cambialo al exportar.
+* **Los proyectos (`.nslite`) guardan la ruta de la foto base en la PC** (por ejemplo
+  `C:\Users\<usuario>\...`, con el usuario de Windows) junto con las capas (estas, sin metadatos):
+  son para trabajar, no para compartir. Para publicar, siempre se exporta.
 
 ## Auditoría (NS-104.3)
 

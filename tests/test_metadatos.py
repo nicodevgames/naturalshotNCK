@@ -42,6 +42,8 @@ def exif_completo(orientacion: int = 6, con_miniatura: bool = True) -> bytes:
     e[M.TAG_PC] = "PC-DE-JUAN"
     e[M.TAG_DOCUMENTO] = "IMG_0001.CR3"
     e[M.TAG_DESCRIPCION] = "C:\\Users\\juan\\Fotos\\IMG_0001.jpg"
+    e[M.TAG_ARTISTA] = "Juan Pérez"
+    e[M.TAG_COPYRIGHT] = "Juan Pérez 2026"
     gps = e.get_ifd(M.IFD_GPS)
     gps[1], gps[2], gps[3], gps[4] = "S", (34.0, 36.0, 0.0), "W", (58.0, 22.0, 0.0)
     sub = e.get_ifd(M.IFD_EXIF)
@@ -51,6 +53,7 @@ def exif_completo(orientacion: int = 6, con_miniatura: bool = True) -> bytes:
     sub[M.TAG_SERIE_LENTE] = "0000c1a2b3"
     sub[M.TAG_DUENO] = "Juan Pérez"
     sub[M.TAG_ID_UNICO] = "A1B2C3D4E5F6"
+    sub[M.TAG_COMENTARIO] = b"ASCII\x00\x00\x00depto de Juan, Palermo"
     sub[M.TAG_ANCHO], sub[M.TAG_ALTO] = 6000, 4000
     datos = e.tobytes()
     if con_miniatura:
@@ -88,7 +91,8 @@ class FotosTest(unittest.TestCase):
 
     def test_el_original_de_prueba_tiene_todo_lo_que_no_tiene_que_salir(self):
         problemas = M.auditar_imagen(self.original)
-        for esperado in ("Orientation", "GPS", "HostComputer", "BodySerialNumber", "Dimensiones", "miniatura"):
+        for esperado in ("Orientation", "GPS", "HostComputer", "BodySerialNumber", "Dimensiones", "miniatura",
+                         "Artist", "Copyright", "UserComment", "ImageDescription"):
             self.assertTrue(any(esperado in p for p in problemas), (esperado, problemas))
 
     def test_foto_unica_jpeg_y_png_cumplen_la_politica(self):
@@ -141,6 +145,23 @@ class FotosTest(unittest.TestCase):
         # El original (con GPS, seriales...) no pasa: código 1 y el motivo en el reporte.
         self.assertEqual(H.main([str(self.original), "--reporte", str(reporte)]), 1)
         self.assertIn("GPS", reporte.read_text(encoding="utf-8"))
+
+    def test_nombres_y_textos_libres_no_salen(self):
+        """Artist, Copyright, UserComment y cualquier ImageDescription (no solo una ruta) salen siempre."""
+        e = Image.Exif()
+        e[0x010F] = "Canon"
+        e[M.TAG_DESCRIPCION] = "Casa de Juan, Palermo"
+        e[M.TAG_ARTISTA] = "Juan Pérez"
+        e[M.TAG_COPYRIGHT] = "Juan Pérez"
+        e[M.TAG_XP_TITULO] = "secreto".encode("utf-16-le")
+        e.get_ifd(M.IFD_EXIF)[M.TAG_COMENTARIO] = b"ASCII\x00\x00\x00depto de Juan"
+        limpio = Image.Exif()
+        limpio.load(M.limpiar_exif(e.tobytes(), 10, 10))
+        self.assertEqual(limpio.get(0x010F), "Canon")  # la cámara se conserva (política de Love)
+        for tag in (M.TAG_DESCRIPCION, M.TAG_ARTISTA, M.TAG_COPYRIGHT, M.TAG_XP_TITULO):
+            self.assertNotIn(tag, limpio)
+        self.assertNotIn(M.TAG_COMENTARIO, limpio.get_ifd(M.IFD_EXIF))
+        self.assertNotIn(b"Juan", M.limpiar_exif(e.tobytes(), 10, 10))
 
     def test_rutas(self):
         for ruta in ("C:\\Users\\a\\b.jpg", "D:/fotos/x.png", "\\\\servidor\\carpeta", "/home/nico/a.jpg"):
