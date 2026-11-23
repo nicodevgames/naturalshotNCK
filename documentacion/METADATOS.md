@@ -57,12 +57,22 @@ Sin la casilla marcada, la foto sale sin ningún EXIF (solo el perfil ICC).
 | Audio (M4A/MP3/WAV) | `exportar_audio` | `celular_natural/motor/audio.py` | Ninguno del original |
 | Proyecto de audio | `exportar_proyecto` | `celular_natural/motor/proyecto_audio.py` | Ninguno del original |
 
-## Fuera del alcance
+## Marcas de procedencia
 
-Esta política es de privacidad. La app **no** agrega, quita, falsifica ni intenta romper
-marcas de procedencia o de contenido generado con IA (C2PA, SynthID, IPTC "Digital Source
-Type"): las plataformas piden declarar lo hecho con IA, y esconderlo es motivo de baja de
-cuentas.
+La app no escribe C2PA ni XMP propios, y no imita la identidad de ninguna cámara.
+
+De hecho, **el archivo se arma desde los píxeles**, así que nada de lo que traía el original
+sobrevive: EXIF sensible, XMP, IPTC, los textos de PNG (los prompts de ComfyUI) y cualquier
+bloque C2PA/JUMBF. `auditar_imagen` lo comprueba y falla si aparece uno.
+
+Lo que **no** desaparece solo son las marcas incrustadas en los píxeles (SynthID). Con un
+preset aplicado, el reescalado, el grano y el JPEG las degradan de paso. Con "Sin efecto" y
+PNG los píxeles quedan intactos, así que para eso está la perturbación al exportar: reescala
+un 1,5 % y agrega ruido de sigma 2, sin cambiar el tamaño ni el color.
+
+Las marcas **visibles** (un logo en una esquina) las quita la tarjeta **Borrar objetos**:
+"Quitar marca" marca la posición típica y la rellena con lo de alrededor; el botón de lupa
+la busca sola en las cuatro esquinas. Va antes del filtro, así el grano queda parejo encima.
 
 ## Otros cuidados (no son metadatos)
 

@@ -27,6 +27,7 @@ El perfil ICC no es EXIF: lo maneja ``exportar_imagen`` y se conserva siempre.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Optional
 
 from PIL import Image
@@ -128,9 +129,21 @@ def tiene_miniatura(exif: bytes) -> bool:
     return int.from_bytes(datos[siguiente:siguiente + 4], orden) != 0
 
 
+def tiene_c2pa(ruta) -> bool:
+    """True si el archivo trae un bloque C2PA / JUMBF.
+
+    Se busca en los bytes y no en ``im.info``: Pillow no expone los chunks
+    desconocidos de PNG ni los segmentos APP11 de JPEG.
+    """
+    datos = Path(ruta).read_bytes()
+    return b"caBX" in datos or b"jumb" in datos or b"c2pa" in datos.lower()
+
+
 def auditar_imagen(ruta) -> list[str]:
     """Problemas del EXIF de una foto exportada según la política (lista vacía = cumple)."""
     problemas: list[str] = []
+    if tiene_c2pa(ruta):
+        problemas.append("Tiene C2PA/JUMBF (el archivo tiene que salir reconstruido desde los píxeles)")
     with Image.open(ruta) as im:
         ancho, alto = im.size
         e = im.getexif()

@@ -25,6 +25,8 @@ from PySide6.QtWidgets import (
 )
 
 from ..motor.edicion import ZonaBorrado
+from ..motor.marca_agua import (NOMBRES_POSICION, POSICIONES, borrado_de_marca,
+                                caja_de_preset, detectar_marca)
 from ..motor.zonas import Zona
 from . import iconos
 from .controles import SeccionPlegable
@@ -205,6 +207,7 @@ class PanelBorrar(QWidget):
     cambiado = Signal()
     pedirZona = Signal(object, str)  # (destino, forma): hay que marcar en la foto
     pedirFuente = Signal(object)  # (destino): elegir de dónde clonar
+    aviso = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -273,6 +276,29 @@ class PanelBorrar(QWidget):
         fila.addWidget(self.boton_rect)
         cuerpo.addLayout(fila)
 
+        self._aspecto = 1.0
+        self._proveedor = None
+        self._hay_foto = False
+        fila_marca = QHBoxLayout()
+        fila_marca.setSpacing(6)
+        self.combo_posicion = QComboBox()
+        for clave in POSICIONES:
+            self.combo_posicion.addItem(NOMBRES_POSICION[clave], clave)
+        self.boton_marca = QPushButton(" Quitar marca")
+        self.boton_marca.setIcon(iconos.icono("badge-check", 16))
+        self.boton_marca.setToolTip("Marca la esquina típica de un logo de IA y la rellena. "
+                                    "Si no cae donde está el logo, mové la caja con la mira.")
+        self.boton_marca.clicked.connect(self._marca_de_preset)
+        self.boton_detectar = QPushButton()
+        self.boton_detectar.setIcon(iconos.icono("scan-search", 16))
+        self.boton_detectar.setFixedWidth(40)
+        self.boton_detectar.setToolTip("Buscar la marca sola en las esquinas")
+        self.boton_detectar.clicked.connect(self._detectar)
+        fila_marca.addWidget(self.combo_posicion, 1)
+        fila_marca.addWidget(self.boton_marca)
+        fila_marca.addWidget(self.boton_detectar)
+        cuerpo.addLayout(fila_marca)
+
         self.contenedor = QVBoxLayout()
         self.contenedor.setSpacing(8)
         cuerpo.addLayout(self.contenedor)
@@ -284,6 +310,7 @@ class PanelBorrar(QWidget):
         return boton.property("modo") if boton is not None else RELLENAR
 
     def _refrescar(self) -> None:
+        self._hay_foto = self._proveedor is not None and self._proveedor() is not None
         if self.modo() == CLONAR:
             texto = ("Marcá lo que querés borrar y después arrastrá desde ahí hasta la parte de la foto que lo "
                      "reemplaza. Vas a ver cómo queda antes de confirmar.")
@@ -294,6 +321,32 @@ class PanelBorrar(QWidget):
         lleno = len(self._filas) >= MAX_BORRADOS
         for b in (self.boton_pintar, self.boton_lazo, self.boton_rect):
             b.setEnabled(not lleno)
+        for b in (self.combo_posicion, self.boton_marca, self.boton_detectar):
+            b.setEnabled(not lleno and self._hay_foto)
+
+    def preparar(self, proveedor) -> None:
+        """``proveedor()`` devuelve (rgb, aspecto) de la foto abierta, o None."""
+        self._proveedor = proveedor
+        self._refrescar()
+
+    def _foto(self):
+        return self._proveedor() if self._proveedor is not None else None
+
+    def _marca_de_preset(self) -> None:
+        datos = self._foto()
+        if datos is None:
+            return
+        self.agregar(borrado_de_marca(caja_de_preset(self.combo_posicion.currentData(), datos[1])))
+
+    def _detectar(self) -> None:
+        datos = self._foto()
+        if datos is None:
+            return
+        caja = detectar_marca(datos[0])
+        if caja is None:
+            self.aviso.emit("No encontré ninguna marca en las esquinas: probá con la posición a mano.")
+        else:
+            self.agregar(borrado_de_marca(caja))
 
     def _marcar(self, forma: str) -> None:
         self.pedirZona.emit(_ZonaNueva(self), forma)
