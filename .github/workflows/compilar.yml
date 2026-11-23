@@ -149,7 +149,7 @@ jobs:
             echo "**Bajá el de tu compu:**"
             echo "- Windows: \`NaturalShot-PRO-windows-instalador.exe\` (lo instala y crea el acceso directo)."
             echo "  Sin instalar: \`NaturalShot-PRO-windows.zip\`, clic derecho › Extraer todo, y abrí \`NaturalShot PRO\\NaturalShot.exe\`."
-            echo "- Mac con chip Apple (M1, M2, M3, M4): \`NaturalShot-PRO-mac-apple.dmg\`."
+            if ls salida/*mac-apple* >/dev/null 2>&1; then echo "- Mac con chip Apple (M1, M2, M3, M4): \`NaturalShot-PRO-mac-apple.dmg\`."; fi
             echo "- Mac con Intel: \`NaturalShot-PRO-mac-intel.dmg\`."
             echo
             echo "En Mac: abrí el .dmg, arrastrá NaturalShot a Aplicaciones y la primera vez abrila con **clic derecho > Abrir**."
@@ -160,6 +160,12 @@ jobs:
               if [ "$res" = "success" ]; then echo "- ${compu}: todas pasan"; else echo "- ${compu}: algunas fallan (ver Actions)"; fi
             done
           } > notas.md
-          gh release create "$ETIQUETA" "${archivos[@]}" --title "NaturalShot PRO ${VERSION}" \
-            --notes-file notas.md --target "$GITHUB_SHA" --latest
+          if gh release view "$ETIQUETA" >/dev/null 2>&1; then
+            # Un reintento conserva el run_number: la etiqueta ya existe, se sube encima.
+            gh release upload "$ETIQUETA" "${archivos[@]}" --clobber
+            gh release edit "$ETIQUETA" --title "NaturalShot PRO ${VERSION}" --notes-file notas.md --latest
+          else
+            gh release create "$ETIQUETA" "${archivos[@]}" --title "NaturalShot PRO ${VERSION}" \
+              --notes-file notas.md --target "$GITHUB_SHA" --latest
+          fi
           echo "Publicada: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${ETIQUETA}"
