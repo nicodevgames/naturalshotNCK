@@ -6,7 +6,8 @@
 # Para probar, el link es siempre el mismo (la última versión):
 #   https://github.com/nicodevgames/naturalshotNCK/releases/latest
 # Ahí están:
-#   NaturalShot-PRO-windows.zip      descomprimir y abrir NaturalShot.exe
+#   NaturalShot-PRO-windows-instalador.exe   instala NaturalShot en Windows (lo más fácil)
+#   NaturalShot-PRO-windows.zip      sin instalar: descomprimir TODO y abrir NaturalShot.exe
 #   NaturalShot-PRO-mac-apple.dmg    Mac con chip Apple (M1, M2, M3, M4...)
 #   NaturalShot-PRO-mac-intel.dmg    Mac con Intel
 #
@@ -72,7 +73,15 @@ jobs:
       - name: Empaquetar (Windows)
         if: matrix.nombre == 'windows'
         shell: pwsh
-        run: Compress-Archive -Path dist/NaturalShot -DestinationPath NaturalShot-PRO-windows.zip
+        run: |
+          Compress-Archive -Path dist/NaturalShot -DestinationPath NaturalShot-PRO-windows.zip
+          # El instalador (un solo .exe): evita que abran la app desde adentro del zip sin descomprimir.
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          $version = (Select-String -Path celular_natural/__init__.py -Pattern '__version__ = "([^"]+)"').Matches[0].Groups[1].Value
+          & $iscc /Qp "/DVersion=$version" instalador\NaturalShot.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item "dist\instalador\NaturalShot-Setup-$version.exe" NaturalShot-PRO-windows-instalador.exe
 
       - name: Empaquetar (Mac)
         if: matrix.nombre != 'windows'
@@ -116,7 +125,8 @@ jobs:
             echo "Versión de prueba de NaturalShot PRO ${VERSION}, compilada desde ${GITHUB_SHA::7}."
             echo
             echo "**Bajá el de tu compu:**"
-            echo "- Windows: \`NaturalShot-PRO-windows.zip\`. Descomprimilo y abrí \`NaturalShot.exe\`."
+            echo "- Windows: \`NaturalShot-PRO-windows-instalador.exe\` (lo instala y crea el acceso directo)."
+            echo "  Sin instalar: \`NaturalShot-PRO-windows.zip\`, clic derecho › Extraer todo, y recién ahí abrí \`NaturalShot.exe\`."
             echo "- Mac con chip Apple (M1, M2, M3, M4): \`NaturalShot-PRO-mac-apple.dmg\`."
             echo "- Mac con Intel: \`NaturalShot-PRO-mac-intel.dmg\`."
             echo
