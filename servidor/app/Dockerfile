@@ -5,13 +5,13 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive LANG=es_AR.UTF-8 LC_ALL=es_AR.UTF-8 TZ=America/Argentina/Buenos_Aires \
     HOME=/root QT_QPA_PLATFORM=xcb XDG_RUNTIME_DIR=/tmp/xdg
 
-# Xpra desde su repositorio oficial: el servidor, su parte X11 (sin ella no arranca), los códecs y el cliente HTML5;
+# Xpra 7 desde su repositorio oficial (beta: el cliente HTML5 actual exige Xpra 7 y el estable da 6.5): el servidor, su parte X11 (sin ella no arranca), los códecs y el cliente HTML5;
 # después Python y las librerías gráficas de Qt.
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates wget gnupg locales tzdata \
     && sed -i 's/# es_AR.UTF-8/es_AR.UTF-8/' /etc/locale.gen && locale-gen \
     && wget -qO /usr/share/keyrings/xpra.asc https://xpra.org/xpra.asc \
     && wget -qO /etc/apt/sources.list.d/xpra.sources \
-         https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra.sources \
+         https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-beta.sources \
     && apt-get update && apt-get install -y --no-install-recommends \
          xpra-server xpra-x11 xpra-codecs xpra-html5 xvfb xauth dbus-x11 \
          python3 python3-venv python3-pip \
