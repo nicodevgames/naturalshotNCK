@@ -1,0 +1,12 @@
+﻿.venv/
+__pycache__/
+*.pyc
+build/
+build_lite/
+dist/
+dist_lite/
+publicar/
+*.zip
+*.lnk
+*.out
+Muestras de audio/

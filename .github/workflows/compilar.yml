@@ -1,0 +1,133 @@
+# Compila NaturalShot PRO para Windows y Mac en las máquinas de GitHub y publica una versión de prueba
+# en este mismo repositorio. Nadie necesita tener Windows ni Mac para armarla.
+#
+# Se corre sola con cada cambio en main, o a mano: pestaña Actions > "Compilar y publicar" > Run workflow.
+#
+# Para probar, el link es siempre el mismo (la última versión):
+#   https://github.com/nicodevgames/naturalshotNCK/releases/latest
+# Ahí están:
+#   NaturalShot-PRO-windows.zip      descomprimir y abrir NaturalShot.exe
+#   NaturalShot-PRO-mac-apple.dmg    Mac con chip Apple (M1, M2, M3, M4...)
+#   NaturalShot-PRO-mac-intel.dmg    Mac con Intel
+#
+# Mac sin cuenta de Apple Developer: la primera vez se abre con clic derecho > Abrir (o Ajustes del
+# Sistema > Privacidad y seguridad > Abrir igualmente). Después abre sola.
+
+name: Compilar y publicar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: compilar
+  cancel-in-progress: true
+
+jobs:
+  compilar:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            nombre: windows
+          - os: macos-14          # chip Apple (arm64)
+            nombre: mac-apple
+          - os: macos-15-intel    # Intel (x86_64)
+            nombre: mac-intel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Dependencias
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Pruebas
+        id: pruebas
+        # Se informan en la versión, pero no frenan la compilación de prueba: en Mac varias pruebas son
+        # de Windows (DPAPI, PowerShell, fuentes de C:\Windows).
+        continue-on-error: true
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest discover -s tests
+
+      - name: Resultado de las pruebas
+        shell: bash
+        run: echo "${{ matrix.nombre }}=${{ steps.pruebas.outcome }}" > pruebas-${{ matrix.nombre }}.txt
+
+      - name: Compilar
+        run: python -m PyInstaller --noconfirm --clean NaturalShot.spec
+
+      - name: Empaquetar (Windows)
+        if: matrix.nombre == 'windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist/NaturalShot -DestinationPath NaturalShot-PRO-windows.zip
+
+      - name: Empaquetar (Mac)
+        if: matrix.nombre != 'windows'
+        run: |
+          xattr -cr dist/NaturalShot.app
+          codesign --force --deep --sign - dist/NaturalShot.app
+          hdiutil create -volname "NaturalShot PRO" -srcfolder dist/NaturalShot.app -ov -format UDZO \
+            "NaturalShot-PRO-${{ matrix.nombre }}.dmg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NaturalShot-${{ matrix.nombre }}
+          path: |
+            NaturalShot-PRO-*
+            pruebas-*.txt
+          retention-days: 14
+
+  publicar:
+    needs: compilar
+    # Publica lo que se haya podido compilar, aunque una de las tres falle.
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: salida
+          merge-multiple: true
+
+      - name: Publicar la versión de prueba
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          archivos=(salida/NaturalShot-PRO-*)
+          if [ ${#archivos[@]} -eq 0 ]; then echo "No se compiló nada."; exit 1; fi
+          VERSION=$(python3 -c "import re;print(re.search(r'__version__ = \"([^\"]+)\"', open('celular_natural/__init__.py', encoding='utf-8').read()).group(1))")
+          ETIQUETA="v${VERSION}-prueba.${{ github.run_number }}"
+          {
+            echo "Versión de prueba de NaturalShot PRO ${VERSION}, compilada desde ${GITHUB_SHA::7}."
+            echo
+            echo "**Bajá el de tu compu:**"
+            echo "- Windows: \`NaturalShot-PRO-windows.zip\`. Descomprimilo y abrí \`NaturalShot.exe\`."
+            echo "- Mac con chip Apple (M1, M2, M3, M4): \`NaturalShot-PRO-mac-apple.dmg\`."
+            echo "- Mac con Intel: \`NaturalShot-PRO-mac-intel.dmg\`."
+            echo
+            echo "En Mac: abrí el .dmg, arrastrá NaturalShot a Aplicaciones y la primera vez abrila con **clic derecho > Abrir**."
+            echo
+            echo "**Pruebas automáticas:**"
+            for f in salida/pruebas-*.txt; do
+              linea=$(cat "$f"); compu=${linea%%=*}; res=${linea#*=}
+              if [ "$res" = "success" ]; then echo "- ${compu}: todas pasan"; else echo "- ${compu}: algunas fallan (ver Actions)"; fi
+            done
+          } > notas.md
+          gh release create "$ETIQUETA" "${archivos[@]}" --title "NaturalShot PRO ${VERSION} (prueba ${{ github.run_number }})" \
+            --notes-file notas.md --target "$GITHUB_SHA" --latest
+          echo "Publicada: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${ETIQUETA}"

@@ -1,0 +1,32 @@
+NaturalShot Lite - Editor de fotos realistas
+============================================
+
+Cómo usarla en esta PC
+----------------------
+1. Descomprimí todo el .zip en una carpeta, por ejemplo en el Escritorio.
+   (No abras la app desde adentro del .zip: tiene que estar descomprimida.)
+2. Entrá a la carpeta "NaturalShot Lite" y abrí "NaturalShot Lite.exe".
+3. Para tener un acceso directo: clic derecho sobre NaturalShot Lite.exe
+   > Mostrar más opciones > Enviar a > Escritorio (crear acceso directo).
+
+Importante
+----------
+- No separes NaturalShot Lite.exe de la carpeta "_internal": la app necesita las dos.
+- No hace falta instalar Python ni nada más. Funciona en Windows 10 y 11 de 64 bits.
+- La primera vez puede tardar unos segundos en abrir.
+- NaturalShot Lite es solo para fotos: no abre videos ni audios.
+- Tiene sus propias preferencias, presets y sesión: no se mezcla con NaturalShot PRO
+  (las dos pueden estar instaladas en la misma PC).
+
+Si Windows muestra "Windows protegió su PC"
+-------------------------------------------
+Aparece porque la app no está firmada digitalmente (es normal en apps hechas a mano).
+Tocá "Más información" y después "Ejecutar de todas formas".
+Si el antivirus la bloquea, agregá la carpeta como excepción.
+
+Actualizaciones
+---------------
+Esta versión no se actualiza sola: cuando haya una nueva, descomprimí el zip nuevo en lugar de
+la carpeta actual. Tus preferencias, presets y sesión no se tocan.
+
+Todo se procesa en la compu: las fotos no se suben a ningún lado y el original nunca se modifica.

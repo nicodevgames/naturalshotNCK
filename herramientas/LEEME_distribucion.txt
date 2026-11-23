@@ -1,0 +1,38 @@
+﻿NaturalShot PRO - Editor de fotos realistas
+============================================
+
+Cómo usarla en esta PC
+----------------------
+1. Descomprimí todo el .zip en una carpeta, por ejemplo en el Escritorio.
+   (No abras la app desde adentro del .zip: tiene que estar descomprimida.)
+2. Entrá a la carpeta "NaturalShot PRO" y abrí "NaturalShot.exe".
+3. Para tener un acceso directo: clic derecho sobre NaturalShot.exe
+   > Mostrar más opciones > Enviar a > Escritorio (crear acceso directo).
+
+Importante
+----------
+- No separes NaturalShot.exe de la carpeta "_internal": la app necesita las dos.
+- No hace falta instalar Python ni nada más. Funciona en Windows 10 y 11 de 64 bits.
+- La primera vez puede tardar unos segundos en abrir.
+
+Si Windows muestra "Windows protegió su PC"
+-------------------------------------------
+Aparece porque la app no está firmada digitalmente (es normal en apps hechas a mano).
+Tocá "Más información" y después "Ejecutar de todas formas".
+Si el antivirus la bloquea, agregá la carpeta como excepción.
+
+Actualizaciones automáticas
+---------------------------
+La primera vez, tocá "Conectar con GitHub" (en el aviso de arriba o en la versión, arriba a la
+izquierda) y seguí los pasos con la cuenta de GitHub con la que te invitaron. Desde ahí, cuando haya
+una versión nueva, NaturalShot te avisa y se actualiza sola con "Actualizar ahora" (se cierra y se
+vuelve a abrir en unos segundos). Tus preferencias y presets no se tocan. Para que pueda
+actualizarse, dejá la carpeta en un lugar donde puedas escribir (Escritorio o Documentos, no en
+"Archivos de programa").
+
+Videos: tocá el botón con el ícono de película (Video) para abrir el editor de video.
+Exportar un video tarda varios minutos: se aplica el filtro cuadro por cuadro.
+
+Todo se procesa en la compu: las fotos no se suben a ningún lado y el original nunca se modifica.
+
+
