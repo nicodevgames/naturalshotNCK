@@ -149,7 +149,7 @@ jobs:
             echo "**Bajá el de tu compu:**"
             echo "- Windows: \`NaturalShot-PRO-windows-instalador.exe\` (lo instala y crea el acceso directo)."
             echo "  Sin instalar: \`NaturalShot-PRO-windows.zip\`, clic derecho › Extraer todo, y abrí \`NaturalShot PRO\\NaturalShot.exe\`."
-            if ls salida/*mac-apple* >/dev/null 2>&1; then echo "- Mac con chip Apple (M1, M2, M3, M4): \`NaturalShot-PRO-mac-apple.dmg\`."; fi
+            if compgen -G "salida/*mac-apple*" >/dev/null; then echo "- Mac con chip Apple (M1, M2, M3, M4): \`NaturalShot-PRO-mac-apple.dmg\`."; fi
             echo "- Mac con Intel: \`NaturalShot-PRO-mac-intel.dmg\`."
             echo
             echo "En Mac: abrí el .dmg, arrastrá NaturalShot a Aplicaciones y la primera vez abrila con **clic derecho > Abrir**."
