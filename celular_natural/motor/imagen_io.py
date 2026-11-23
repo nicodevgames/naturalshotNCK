@@ -212,6 +212,25 @@ def _es_mismo_archivo(a: Path, b: Path) -> bool:
     return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
 
 
+def _desmarcar_pixeles(rgb: np.ndarray, semilla: int = 0) -> np.ndarray:
+    """Perturba la firma en píxeles (SynthID) sin cambiar tamaño ni color.
+
+    Ida y vuelta por un reescalado del 98,5 % (rompe la grilla de bloques, que es
+    justamente lo que la vuelve robusta a recortes y recompresión) más ruido
+    gaussiano de sigma 2 en 8 bits, por debajo de la tolerancia de los bloques.
+    La imagen vuelve a su tamaño exacto.
+    """
+    alto, ancho = rgb.shape[:2]
+    if min(alto, ancho) < 32:
+        return rgb
+    f = 0.985
+    im = Image.fromarray(rgb, "RGB")
+    im = im.resize((max(1, round(ancho * f)), max(1, round(alto * f))), Image.LANCZOS)
+    im = im.resize((ancho, alto), Image.LANCZOS)
+    a = np.asarray(im, np.float32) + np.random.default_rng(semilla).normal(0.0, 2.0, (alto, ancho, 3))
+    return np.clip(a + 0.5, 0, 255).astype(np.uint8)
+
+
 def exportar_imagen(
     destino: str | os.PathLike,
     rgb: np.ndarray,
@@ -222,6 +241,8 @@ def exportar_imagen(
     exif: Optional[bytes] = None,
     formato: str = "PNG",
     calidad_jpeg: int = 92,
+    desmarcar: bool = False,
+    semilla: int = 0,
 ) -> Path:
     """Guarda el resultado en un archivo nuevo. Nunca sobrescribe el original."""
     destino = Path(destino)
@@ -238,6 +259,9 @@ def exportar_imagen(
     exif = limpiar_exif(exif, int(rgb.shape[1]), int(rgb.shape[0]))
     if exif:
         opciones["exif"] = exif
+
+    if desmarcar:
+        rgb = _desmarcar_pixeles(rgb, semilla)
 
     if formato == "PNG":
         if alpha is not None:

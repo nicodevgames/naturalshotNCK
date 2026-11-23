@@ -643,6 +643,8 @@ class VentanaPrincipal(QMainWindow):
         self.panel_borrar.cambiado.connect(self._al_cambiar_borrado)
         self.panel_borrar.pedirZona.connect(self._pedir_zona)
         self.panel_borrar.pedirFuente.connect(self._elegir_fuente)
+        self.panel_borrar.aviso.connect(lambda t: self.aviso.mostrar(t, "", icono="triangle-alert"))
+        self.panel_borrar.preparar(self._foto_para_marca)
         # Capas de la foto (columna derecha, arriba de los ajustes).
         self.panel_capas = PanelCapas()
         self.panel_capas.documentoCambiado.connect(self._al_cambiar_documento)
@@ -2138,6 +2140,12 @@ class VentanaPrincipal(QMainWindow):
         self.check_exif = QCheckBox("Conservar metadatos EXIF")
         self.check_exif.setToolTip("Copia fecha, cámara y demás datos del archivo original (con la orientación corregida).")
         capa.addWidget(self.check_exif)
+        self.check_desmarcar = QCheckBox("Romper firma de IA (SynthID)")
+        self.check_desmarcar.setToolTip("Reescala un 1,5 % y agrega ruido imperceptible para degradar la marca "
+                                        "invisible que algunos servicios incrustan en los píxeles. No cambia el "
+                                        "tamaño de la foto.")
+        capa.addWidget(self.check_desmarcar)
+
 
         self.boton_exportar = QPushButton("  Exportar como archivo nuevo…")
         self.boton_exportar.setIcon(iconos.icono(iconos.GUARDAR, color="#ffffff"))
@@ -3812,6 +3820,12 @@ class VentanaPrincipal(QMainWindow):
         self._pedir_zona(_RectanguloContorno(self), "rect")
 
     # ================================================================== clonar
+    def _foto_para_marca(self):
+        """(rgb, aspecto) de la foto abierta para la tarjeta de borrado, o None."""
+        if self._imagen is None or not self._imagen.alto:
+            return None
+        return self._imagen.rgb, self._imagen.ancho / self._imagen.alto
+
     def _elegir_fuente(self, destino) -> None:
         """Borrar objetos → "Clonar desde…": se arrastra desde la zona hasta la fuente, con vista previa."""
         if self._imagen is None:
@@ -4196,6 +4210,7 @@ class VentanaPrincipal(QMainWindow):
         previo = self._resultado_completo
         calidad = self.slider_calidad.value()
         exif = imagen.exif if self.check_exif.isChecked() else None
+        desmarcar = self.check_desmarcar.isChecked()
         almacen = self._almacen
 
         def trabajo(_cancelado):
@@ -4214,6 +4229,7 @@ class VentanaPrincipal(QMainWindow):
             guardado = exportar_imagen(
                 destino, salida, original=imagen.ruta, alpha=alpha_final, icc=imagen.icc,
                 exif=exif, formato=formato, calidad_jpeg=calidad,
+                desmarcar=desmarcar,
             )
             with Image.open(guardado) as verificacion:
                 tam = verificacion.size
