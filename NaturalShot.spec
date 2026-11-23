@@ -29,7 +29,9 @@ a = Analysis(
                    "celular_natural.ui.modo_audio", "celular_natural.ui.paneles_audio",
                    "celular_natural.ui.pistas_audio", "celular_natural.motor.proyecto_audio",
                    "celular_natural.motor.ambientes", "celular_natural.motor.voz_natural",
-                   "PySide6.QtMultimedia", "av"],
+                   "PySide6.QtMultimedia", "av",
+                   # Tutorial adentro de la app (visor de PDF de Qt, paquete PySide6_Pdf)
+                   "celular_natural.ui.tutorial", "PySide6.QtPdf", "PySide6.QtPdfWidgets"],
     hookspath=[],
     runtime_hooks=[],
     excludes=EXCLUIR,
