@@ -35,7 +35,7 @@ jobs:
         include:
           - os: windows-latest
             nombre: windows
-          - os: macos-14          # chip Apple (arm64)
+          - os: macos-latest      # chip Apple (arm64)
             nombre: mac-apple
           - os: macos-15-intel    # Intel (x86_64)
             nombre: mac-intel
