@@ -20,6 +20,8 @@
   .btn .tam { margin-left: auto; color: var(--dim); font-size: 13px; }
   .btn.principal .tam { color: rgba(255,255,255,.8); }
   .nota { font-size: 13px; color: var(--dim); margin-top: 10px; }
+  .nota ol { margin: 6px 0 0; padding-left: 20px; }
+  .nota li { margin: 3px 0; }
   ul.archivos { list-style: none; padding: 0; margin: 8px 0 0; }
   ul.archivos li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
   ul.archivos a { color: var(--ink); word-break: break-all; }
@@ -61,11 +63,24 @@
 const NOMBRES = {
   'NaturalShot-PRO-windows-instalador.exe': ['windows', 'Windows (instalador)'],
   'NaturalShot-PRO-windows.zip': ['windows', 'Windows sin instalar (.zip)'],
-  'NaturalShot-PRO-mac-apple.dmg': ['mac', 'Mac con chip Apple (M1, M2, M3, M4)'],
-  'NaturalShot-PRO-mac-intel.dmg': ['mac', 'Mac con Intel'],
+  'NaturalShot-PRO-mac-apple.dmg': ['mac-apple', 'Mac con chip Apple (M1, M2, M3, M4)'],
+  'NaturalShot-PRO-mac-intel.dmg': ['mac-intel', 'Mac con Intel'],
 };
 const ua = navigator.userAgent + ' ' + navigator.platform;
-const compu = /iphone|ipad|android/i.test(ua) ? 'otra' : /win/i.test(ua) ? 'windows' : /mac/i.test(ua) ? 'mac' : 'otra';
+// En Mac, qué chip tiene: la placa de video que informa el navegador ("Apple M2" o "Intel…"). Si no se
+// sabe (Safari a veces dice solo "Apple GPU"), quedan las dos y se explica cómo fijarse.
+function chipMac() {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
+    const placa = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+    if (/apple m\d/i.test(placa)) return 'mac-apple';
+    if (/intel|amd|radeon|nvidia/i.test(placa)) return 'mac-intel';
+  } catch (e) { /* sin WebGL */ }
+  return 'mac';
+}
+const compu = /iphone|ipad|android/i.test(ua) ? 'otra' : /win/i.test(ua) ? 'windows' : /mac/i.test(ua) ? chipMac() : 'otra';
+const esDeEsta = (tipo) => tipo === compu || (compu === 'mac' && tipo.startsWith('mac'));
 const tam = (b) => !b ? '' : b > 1073741824 ? (b / 1073741824).toFixed(1).replace('.', ',') + ' GB' : Math.max(1, Math.round(b / 1048576)) + ' MB';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -76,15 +91,30 @@ async function version() {
   v.innerHTML = `<b>${esc(d.version)}</b>` + (d.fecha ? ` · ${new Date(d.fecha).toLocaleDateString('es-AR')}` : '');
   const orden = Object.keys(NOMBRES);
   const archivos = d.archivos.filter((a) => NOMBRES[a.nombre])
-    .sort((a, b) => ((NOMBRES[b.nombre][0] === compu) - (NOMBRES[a.nombre][0] === compu))
+    .sort((a, b) => (esDeEsta(NOMBRES[b.nombre][0]) - esDeEsta(NOMBRES[a.nombre][0]))
       || orden.indexOf(a.nombre) - orden.indexOf(b.nombre));
   document.getElementById('descargas').innerHTML = archivos.map((a, i) =>
-    `<a class="btn ${i === 0 && NOMBRES[a.nombre][0] === compu ? 'principal' : ''}" href="/descargar/${encodeURIComponent(a.nombre)}">
+    `<a class="btn ${esDeEsta(NOMBRES[a.nombre][0]) && (i === 0 || compu === 'mac') ? 'principal' : ''}" href="/descargar/${encodeURIComponent(a.nombre)}">
        ⬇ ${esc(NOMBRES[a.nombre][1])}<span class="tam">${tam(a.tamano)}</span></a>`).join('') || '<div class="nota">Esta versión no tiene archivos para bajar.</div>';
-  document.getElementById('ayuda').innerHTML =
-    '<b>Windows:</b> bajá el instalador y abrilo (si Windows avisa, tocá <b>Más información › Ejecutar de todas formas</b>). ' +
-    'Con el .zip: clic derecho › <b>Extraer todo</b> y abrí <code>NaturalShot PRO › NaturalShot.exe</code> (desde adentro del zip no anda). Ya instalada, se actualiza sola. ' +
-    '<b>Mac:</b> abrí el .dmg, arrastrá NaturalShot a Aplicaciones y la primera vez abrila con <b>clic derecho › Abrir</b>.';
+  const windows = '<b>Cómo instalarla en Windows</b><ol>' +
+    '<li>Bajá el <b>instalador</b> y abrilo.</li>' +
+    '<li>Si aparece «Windows protegió su PC», tocá <b>Más información › Ejecutar de todas formas</b>.</li>' +
+    '<li>Siguiente, Siguiente, Instalar. Queda en el menú Inicio (y en el escritorio si lo elegís).</li></ol>' +
+    'Con el .zip, en cambio: clic derecho › <b>Extraer todo</b> y abrí <code>NaturalShot PRO › NaturalShot.exe</code> ' +
+    '(desde adentro del zip no anda). Ya instalada, se actualiza sola.';
+  const mac = '<b>Cómo instalarla en Mac</b>' +
+    (compu === 'mac' ? '<p>¿Cuál es tu Mac? Menú  › <b>Acerca de esta Mac</b>: si dice <b>Chip Apple M1, M2…</b>, ' +
+      'bajá la de chip Apple; si dice <b>Procesador Intel</b>, la de Intel.</p>' : '') +
+    '<ol><li>Bajá el <b>.dmg</b> y abrilo (doble clic).</li>' +
+    '<li>Arrastrá <b>NaturalShot</b> a la carpeta <b>Aplicaciones</b>. Después podés expulsar el disco «NaturalShot PRO».</li>' +
+    '<li>Abrí <b>Aplicaciones</b> y hacé doble clic en NaturalShot. La primera vez la Mac la frena porque la app no ' +
+      'viene de la App Store: tocá <b>Listo</b> (o <b>OK</b>).</li>' +
+    '<li>Andá a  › <b>Ajustes del Sistema › Privacidad y seguridad</b>, bajá hasta el final y tocá ' +
+      '<b>Abrir igualmente</b> al lado de «NaturalShot». Poné tu clave de la Mac y <b>Abrir</b>.</li>' +
+    '<li>Listo: de ahí en adelante abre normal. En Mac más viejas alcanza con <b>clic derecho › Abrir</b>.</li></ol>' +
+    'Las versiones nuevas en Mac se bajan desde acá (la app avisa cuando hay una).';
+  document.getElementById('ayuda').innerHTML = compu === 'windows' ? windows + '<br><br>' + mac
+    : compu.startsWith('mac') ? mac + '<br><br>' + windows : windows + '<br><br>' + mac;
   document.getElementById('notas').textContent = '';
 }
 
