@@ -5,14 +5,15 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive LANG=es_AR.UTF-8 LC_ALL=es_AR.UTF-8 TZ=America/Argentina/Buenos_Aires \
     HOME=/root QT_QPA_PLATFORM=xcb XDG_RUNTIME_DIR=/tmp/xdg
 
-# Xpra (con su cliente HTML5) desde el repositorio oficial de Xpra, Python y las librerías gráficas de Qt.
+# Xpra desde su repositorio oficial: el servidor, su parte X11 (sin ella no arranca), los códecs y el cliente HTML5;
+# después Python y las librerías gráficas de Qt.
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates wget gnupg locales tzdata \
     && sed -i 's/# es_AR.UTF-8/es_AR.UTF-8/' /etc/locale.gen && locale-gen \
     && wget -qO /usr/share/keyrings/xpra.asc https://xpra.org/xpra.asc \
     && wget -qO /etc/apt/sources.list.d/xpra.sources \
          https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra.sources \
     && apt-get update && apt-get install -y --no-install-recommends \
-         xpra xpra-html5 xvfb xauth dbus-x11 \
+         xpra-server xpra-x11 xpra-codecs xpra-html5 xvfb xauth dbus-x11 \
          python3 python3-venv python3-pip \
          libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
          libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libfontconfig1 libdbus-1-3 \
