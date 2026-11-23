@@ -23,7 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 # La página web de Xpra (el cliente HTML5), fija en la v21: la v22 que trae el repositorio exige Xpra 7 y el
 # servidor es 6.5 ("unsupported server version 6.5: Xpra 7.0 or later is required").
 RUN wget -qO- https://github.com/Xpra-org/xpra-html5/archive/refs/tags/v21.tar.gz | tar -xz -C /tmp \
-    && mv /tmp/xpra-html5-21/html5 /opt/xpra-html5 && rm -rf /tmp/xpra-html5-21
+    && mv /tmp/xpra-html5-21/html5 /opt/xpra-html5 && rm -rf /tmp/xpra-html5-21 \
+    && sed -i 's/^min-quality = .*/min-quality = 80/; s/^min-speed = .*/min-speed = 30/' /opt/xpra-html5/default-settings.txt \
+    && printf 'xpramenu = false\nfloating_menu = false\n' >> /opt/xpra-html5/default-settings.txt
 
 # Las fuentes de Windows que pide la app, reemplazadas por otras de medidas parecidas (si no, se cortan textos).
 COPY servidor/app/fuentes.conf /etc/fonts/local.conf
@@ -40,7 +42,7 @@ RUN mkdir -p /root/NaturalShot/Entradas /root/NaturalShot/Exportados /tmp/xdg &&
     && chmod +x /usr/local/bin/naturalshot-bucle
 
 EXPOSE 14500
-CMD ["xpra", "start", ":100", "--daemon=no", "--bind-tcp=0.0.0.0:14500", "--html=/opt/xpra-html5", \
+CMD ["xpra", "start", ":100", "--daemon=no", "--bind-tcp=0.0.0.0:14500", "--html=/opt/xpra-html5", "--min-quality=80", \
      "--start-child=/usr/local/bin/naturalshot-bucle", "--exit-with-children=no", \
      "--pulseaudio=no", "--notifications=no", "--webcam=no", "--mdns=no", "--printing=no", \
      "--file-transfer=yes", "--clipboard=yes", "--speaker=off", "--microphone=off"]
