@@ -5,20 +5,25 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive LANG=es_AR.UTF-8 LC_ALL=es_AR.UTF-8 TZ=America/Argentina/Buenos_Aires \
     HOME=/root QT_QPA_PLATFORM=xcb XDG_RUNTIME_DIR=/tmp/xdg
 
-# Xpra 7 desde su repositorio oficial (beta: el cliente HTML5 actual exige Xpra 7 y el estable da 6.5): el servidor, su parte X11 (sin ella no arranca), los códecs y el cliente HTML5;
-# después Python y las librerías gráficas de Qt.
+# Xpra (6.5) desde su repositorio oficial: el servidor, su parte X11 (sin ella no arranca) y los códecs;
+# después Python y las librerías gráficas de Qt. La página web de Xpra va aparte (abajo).
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates wget gnupg locales tzdata \
     && sed -i 's/# es_AR.UTF-8/es_AR.UTF-8/' /etc/locale.gen && locale-gen \
     && wget -qO /usr/share/keyrings/xpra.asc https://xpra.org/xpra.asc \
     && wget -qO /etc/apt/sources.list.d/xpra.sources \
-         https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-beta.sources \
+         https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra.sources \
     && apt-get update && apt-get install -y --no-install-recommends \
-         xpra-server xpra-x11 xpra-codecs xpra-html5 xvfb xauth dbus-x11 \
+         xpra-server xpra-x11 xpra-codecs xvfb xauth dbus-x11 \
          python3 python3-venv python3-pip \
          libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
          libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libfontconfig1 libdbus-1-3 \
          fonts-dejavu fonts-liberation fonts-noto-color-emoji xdg-utils evince \
     && rm -rf /var/lib/apt/lists/*
+
+# La página web de Xpra (el cliente HTML5), fija en la v21: la v22 que trae el repositorio exige Xpra 7 y el
+# servidor es 6.5 ("unsupported server version 6.5: Xpra 7.0 or later is required").
+RUN wget -qO- https://github.com/Xpra-org/xpra-html5/archive/refs/tags/v21.tar.gz | tar -xz -C /tmp \
+    && mv /tmp/xpra-html5-21/html5 /opt/xpra-html5 && rm -rf /tmp/xpra-html5-21
 
 WORKDIR /app
 COPY requirements.txt .
@@ -32,7 +37,7 @@ RUN mkdir -p /root/NaturalShot/Entradas /root/NaturalShot/Exportados /tmp/xdg &&
     && chmod +x /usr/local/bin/naturalshot-bucle
 
 EXPOSE 14500
-CMD ["xpra", "start", ":100", "--daemon=no", "--bind-tcp=0.0.0.0:14500", "--html=on", \
+CMD ["xpra", "start", ":100", "--daemon=no", "--bind-tcp=0.0.0.0:14500", "--html=/opt/xpra-html5", \
      "--start-child=/usr/local/bin/naturalshot-bucle", "--exit-with-children=no", \
      "--pulseaudio=no", "--notifications=no", "--webcam=no", "--mdns=no", "--printing=no", \
      "--file-transfer=yes", "--clipboard=yes", "--speaker=off", "--microphone=off"]
