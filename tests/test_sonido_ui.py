@@ -464,6 +464,7 @@ class PruebasVentanaSonido(unittest.TestCase):
         v.activateWindow()  # los atajos (M, Ctrl+Z) andan en la ventana activa
         v.abrir_rutas([str(ruta or self.video)])
         e = v.editor_video
+        e.establecer_simple(False)  # estas pruebas son del editor completo (línea de tiempo y pista de sonido)
         self.assertTrue(esperar(self.app, lambda: e.info is not None and e.cuadro_procesado_listo()))
         self.assertTrue(esperar(self.app, lambda: e.pista_sonido.estado in ("lista", "sin_sonido")))
         return v, e

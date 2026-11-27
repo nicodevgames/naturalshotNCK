@@ -555,6 +555,59 @@ class PruebasModoVideo(unittest.TestCase):
         v.establecer_modo(FACIL)
         self.assertFalse(v.boton_modo_video.punto)
 
+    # ------------------------------------------------------------ Video fácil
+    def test_desde_facil_se_abre_en_video_facil(self):
+        """Desde el modo Fácil, un video se abre en "Video fácil": sin línea de tiempo, atajos, Mejorar
+        calidad ni secciones finas; con estilo, intensidad, sonido y "Exportar video entero…"."""
+        from celular_natural.ui.modo_facil import EDITOR, FACIL
+        v = self.v
+        self.assertEqual(v._modo, FACIL)
+        v.abrir_rutas([str(self.video1)])
+        editor = v.editor_video
+        self.esperar(self.video_listo(self.video1))
+        self.assertTrue(editor.simple)
+        for w in editor._solo_completo():
+            self.assertFalse(w.isVisible(), w)
+        self.assertTrue(editor.nota_simple.isVisible())
+        self.assertTrue(editor.panel_ajustes.combo_preset.isVisible())
+        self.assertTrue(editor.panel_ajustes.intensidad.isVisible())
+        self.assertTrue(editor.panel_sonido.isVisible())
+        self.assertIn("Exportar video entero", editor.boton_exportar.text())
+        # Al botón: todas las herramientas, y de vuelta.
+        editor.boton_simple.click()
+        self.assertFalse(editor.simple)
+        self.assertTrue(editor._tarjeta_linea.isVisible())
+        self.assertFalse(editor.nota_simple.isVisible())
+        self.assertEqual(editor.boton_exportar.text().strip(), "Exportar video…")
+        editor.boton_simple.click()
+        self.assertTrue(editor.simple)
+        # Desde el Editor, el próximo video se abre con todas las herramientas.
+        v.establecer_modo(EDITOR)
+        v.abrir_rutas([str(self.video2)])
+        self.esperar(self.video_listo(self.video2))
+        self.assertFalse(editor.simple)
+        self.assertTrue(editor._tarjeta_linea.isVisible())
+
+    def test_video_facil_exporta_el_video_entero_con_el_estilo(self):
+        from PySide6.QtWidgets import QFileDialog, QMessageBox
+        v = self.v
+        v.abrir_rutas([str(self.video1)])
+        editor = v.editor_video
+        self.esperar(self.video_listo(self.video1))
+        self.assertTrue(editor.simple)
+        editor.panel_ajustes.combo_preset.setCurrentText("Celular natural — sutil")
+        editor.panel_ajustes.intensidad.slider.setValue(30)
+        self.assertEqual(editor.panel_ajustes.pila()[0].intensidad, 30)
+        destino = self.dir / "video_facil.mp4"
+        with mock.patch.object(QFileDialog, "getSaveFileName", return_value=(str(destino), "MP4 (*.mp4)")), \
+                mock.patch.object(QMessageBox, "information"):
+            editor.exportar()
+            self.esperar(lambda: not editor.exportando, 120)
+        self.assertTrue(destino.exists())
+        cuadros, audio, _datos = leer_video(destino)
+        self.assertEqual([leer_codigo(c) for c in cuadros], list(range(72)))  # entero, sin cortes
+        self.assertIsNotNone(audio)  # con su sonido
+
 
 if __name__ == "__main__":
     unittest.main()

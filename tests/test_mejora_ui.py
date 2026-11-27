@@ -476,6 +476,7 @@ class PruebasVentanaMejora(unittest.TestCase):
         v.activateWindow()  # los atajos (Ctrl+Z) andan en la ventana activa
         v.abrir_rutas([str(self.video)])
         e = v.editor_video
+        e.establecer_simple(False)  # "Mejorar calidad" es del editor completo (en Video fácil no se ve)
         self.assertTrue(esperar(self.app, lambda: e.info is not None and e.cuadro_procesado_listo()))
         return v, e
 

@@ -462,6 +462,30 @@ class EditorVideo(QWidget):
         self._actualizar_mejora()
         self._actualizar_habilitados()
         self.limpiar_temporales()
+        self.simple = False
+        self.establecer_simple(False)
+
+    # ============================================================ video fácil
+    def _solo_completo(self) -> list[QWidget]:
+        """Lo que el "Video fácil" esconde: la línea de tiempo y los cortes, los atajos, Mejorar calidad,
+        las secciones finas del filtro y las capas. Quedan el estilo, la intensidad, el sonido y exportar."""
+        capas = self.panel_ajustes.boton_agregar_capa
+        while capas is not None and not isinstance(capas, SeccionPlegable):
+            capas = capas.parentWidget()
+        widgets = [self._tarjeta_linea, self._tarjeta_atajos, self.panel_mejora, self.panel_ajustes.lado_ajustes]
+        return widgets + ([capas] if capas is not None else [])
+
+    def establecer_simple(self, simple: bool) -> None:
+        """"Video fácil" (como el modo Fácil de las fotos): abrir, elegir un estilo y exportar el video
+        entero. Solo cambia qué se ve: el filtro, el sonido y lo que se haya editado quedan como estaban."""
+        self.simple = bool(simple)
+        for w in self._solo_completo():
+            w.setVisible(not self.simple)
+        self.nota_simple.setVisible(self.simple)
+        self.boton_simple.setText(" Todas las herramientas" if self.simple else " Video fácil")
+        self.boton_simple.setToolTip("Mostrar la línea de tiempo, los cortes y todos los ajustes" if self.simple
+                                     else "Solo elegir un estilo y exportar el video entero")
+        self._actualizar_habilitados()
 
     # ============================================================ interfaz
     def _construir_interfaz(self) -> None:
@@ -473,7 +497,8 @@ class EditorVideo(QWidget):
         contenido.setSpacing(12)
         contenido.addWidget(self._construir_barra_herramientas())
         contenido.addWidget(self._construir_tarjeta_vista(), 1)
-        contenido.addWidget(self._construir_tarjeta_linea())
+        self._tarjeta_linea = self._construir_tarjeta_linea()
+        contenido.addWidget(self._tarjeta_linea)
         raiz.addLayout(contenido, 1)
         self._derecho = self._construir_panel_derecho()
         raiz.addWidget(self._derecho)
@@ -537,10 +562,23 @@ class EditorVideo(QWidget):
         fila_nota.addWidget(self.boton_filtro_fotos, 0, Qt.AlignVCenter)
         if self._ventana is None:
             self.nota_filtro.hide()
+        # "Video fácil": una nota arriba y el botón para ir y volver de todas las herramientas.
+        self.nota_simple = QLabel("Video fácil: elegí un estilo y su intensidad, y exportá el video entero "
+                                  "(con su sonido). Para cortar o ajustar más, tocá \"Todas las herramientas\".")
+        self.nota_simple.setObjectName("nota")
+        self.nota_simple.setWordWrap(True)
+        capa_panel.addWidget(self.nota_simple)
+        self.boton_simple = QPushButton(" Video fácil")
+        self.boton_simple.setObjectName("botonChico")
+        self.boton_simple.setIcon(iconos.icono("sparkles", 14))
+        self.boton_simple.setCursor(Qt.PointingHandCursor)
+        self.boton_simple.clicked.connect(lambda: self.establecer_simple(not self.simple))
+        capa_panel.addWidget(self.boton_simple)
         capa_panel.addWidget(self.nota_filtro)
         capa_panel.addWidget(self.panel_ajustes.lado_presets)
         capa_panel.addWidget(self._construir_tarjeta_info())
-        capa_panel.addWidget(self._construir_tarjeta_atajos())
+        self._tarjeta_atajos = self._construir_tarjeta_atajos()
+        capa_panel.addWidget(self._tarjeta_atajos)
         capa_panel.addStretch(1)
         desplazable = QScrollArea()
         desplazable.setWidgetResizable(True)
@@ -2172,7 +2210,9 @@ class EditorVideo(QWidget):
         self.boton_rehacer.setEnabled(bool(self._rehacer))
         quedan = hay and bool(self.edicion.tramos_conservados())
         self.boton_exportar.setEnabled(quedan and not self.exportando)
-        self.boton_exportar.setText("  Exportando…" if self.exportando else "  Exportar video…")
+        self.boton_exportar.setText("  Exportando…" if self.exportando
+                                    else "  Exportar video entero…" if getattr(self, "simple", False)
+                                    else "  Exportar video…")
         self.boton_cerrar_video.setVisible(hay)
         self.boton_cerrar_video.setEnabled(hay and not self.exportando)
         self._actualizar_boton_sonido()

@@ -2413,9 +2413,14 @@ class VentanaPrincipal(QMainWindow):
             self.agregar_fotos(fotos)
         # El modo en que se termina: el de antes si algo fue ahí; si no, Video, Audio o las fotos.
         if video is not None:
+            # Desde el modo Fácil, el video se abre en "Video fácil" (estilo, intensidad y exportar entero);
+            # desde el Editor, con todas las herramientas. Dentro de Video queda como estaba.
+            editor = self._asegurar_editor()
+            if not desde_video:
+                editor.establecer_simple(self._modo == FACIL)
             if not (desde_audio and audio is not None):
                 self.establecer_modo(VIDEO)
-            self._asegurar_editor().abrir(video, confirmar=False)
+            editor.abrir(video, confirmar=False)
         if audio is not None:
             if not (desde_video and video is not None) and not (video is not None and not desde_audio):
                 self.establecer_modo(AUDIO)
