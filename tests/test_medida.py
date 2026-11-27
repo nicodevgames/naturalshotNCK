@@ -392,9 +392,12 @@ class PruebasVentana(_Base):
         carpeta = self.base / "lote"
         carpeta.mkdir(exist_ok=True)
         rutas = [str(r) for r in self.chicas]
-        with mock.patch.object(QFileDialog, "getOpenFileNames", return_value=(rutas, "")), \
+        # Con fotos en la tira, "Exportar varias" ofrece esas; con "Elegir otras…", el selector de siempre.
+        with mock.patch.object(v, "_preguntar_lote", return_value="otras") as pregunta, \
+                mock.patch.object(QFileDialog, "getOpenFileNames", return_value=(rutas, "")), \
                 mock.patch.object(QFileDialog, "getExistingDirectory", return_value=str(carpeta)):
             v.procesar_varias()
+        pregunta.assert_called_once_with(3)
         self.esperar(lambda: not v._exportando, v)
         salidas = {p.name: leer_png(p) for p in carpeta.iterdir()}
         self.assertEqual(salidas["chica0_celular.png"].shape, (1920, 1080, 3))
@@ -402,6 +405,27 @@ class PruebasVentana(_Base):
         self.assertEqual(salidas["chica2_celular.png"].shape, (900, 1200, 3))  # sin medida, como siempre
         # Sin zonas ni montaje, el lote da lo mismo que exportarla sola.
         self.assertTrue(np.array_equal(salidas["chica1_celular.png"], esperada_1))
+
+    def test_exportar_varias_ofrece_las_fotos_abiertas(self):
+        """Un clic: "Las 3 abiertas" exporta las de la tira sin abrir el selector; Cancelar no hace nada."""
+        from PySide6.QtWidgets import QFileDialog
+        v = self.ventana(self.chicas)
+        self.esperar(v=v)
+        carpeta = self.base / "abiertas"
+        carpeta.mkdir(exist_ok=True)
+        with mock.patch.object(v, "_preguntar_lote", return_value=""), \
+                mock.patch.object(QFileDialog, "getOpenFileNames") as selector:
+            v.procesar_varias()
+        selector.assert_not_called()
+        self.assertFalse(v._exportando)
+        with mock.patch.object(v, "_preguntar_lote", return_value="abiertas"), \
+                mock.patch.object(QFileDialog, "getOpenFileNames") as selector, \
+                mock.patch.object(QFileDialog, "getExistingDirectory", return_value=str(carpeta)):
+            v.procesar_varias()
+        selector.assert_not_called()
+        self.esperar(lambda: not v._exportando, v)
+        self.assertEqual(sorted(p.name for p in carpeta.iterdir()),
+                         sorted(f"{Path(r).stem}_celular.png" for r in self.chicas))
 
     def test_en_el_modo_facil_tambien(self):
         from celular_natural.ui.modo_facil import FACIL

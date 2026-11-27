@@ -4465,8 +4465,7 @@ class VentanaPrincipal(QMainWindow):
     def procesar_varias(self) -> None:
         if self._exportando:
             return
-        inicio = self.carpeta_inicio()
-        rutas, _ = QFileDialog.getOpenFileNames(self, "Elegí las fotos a procesar", inicio, FILTRO_ABRIR)
+        rutas = self._elegir_fotos_lote()
         if not rutas:
             return
         carpeta = QFileDialog.getExistingDirectory(
@@ -4487,6 +4486,35 @@ class VentanaPrincipal(QMainWindow):
         self._actualizar_habilitados()
         self._ocupado()
         self._pool_archivos.start(Tarea("lote", 0, trabajo, self._senales))
+
+    def _elegir_fotos_lote(self) -> list[str]:
+        """Las fotos para "Exportar varias fotos…": con fotos abiertas en la tira, ofrece esas (un clic, sin
+        volver a buscarlas); si no, o si se elige "Elegir otras…", el selector de archivos de siempre."""
+        abiertas = [f.ruta for f in self._fotos if not dc.es_ruta_documento(f.ruta) and Path(f.ruta).is_file()]
+        if len(abiertas) > 1:
+            respuesta = self._preguntar_lote(len(abiertas))
+            if respuesta == "abiertas":
+                return abiertas
+            if respuesta != "otras":
+                return []
+        rutas, _ = QFileDialog.getOpenFileNames(self, "Elegí las fotos a procesar", self.carpeta_inicio(),
+                                                FILTRO_ABRIR)
+        return rutas
+
+    def _preguntar_lote(self, cuantas: int) -> str:
+        """"abiertas", "otras" o "" (cancelar). Aparte para que las pruebas la contesten sin la ventana."""
+        caja = QMessageBox(self)
+        caja.setIcon(QMessageBox.Question)
+        caja.setWindowTitle("Exportar varias fotos")
+        caja.setText(f"¿Exportar las {cuantas} fotos abiertas con este filtro?")
+        caja.setInformativeText("Salen con el estilo y la intensidad actuales. Las que tienen una Medida salen "
+                                "con su encuadre.")
+        todas = caja.addButton(f"Las {cuantas} abiertas", QMessageBox.AcceptRole)
+        otras = caja.addButton("Elegir otras…", QMessageBox.ActionRole)
+        caja.addButton("Cancelar", QMessageBox.RejectRole)
+        caja.setDefaultButton(todas)
+        caja.exec()
+        return "abiertas" if caja.clickedButton() is todas else "otras" if caja.clickedButton() is otras else ""
 
     def _lote_terminado(self, resultados) -> None:
         self._exportando = False

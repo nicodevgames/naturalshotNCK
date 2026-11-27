@@ -1,6 +1,7 @@
 # Ejecución
 PySide6-Essentials>=6.8
 PySide6_Pdf>=6.8  # visor de PDF del tutorial (QtPdf ya no viene en Essentials ni en Addons)
+PySide6-Addons>=6.8  # QtMultimedia: el sonido de la vista previa de video y audio (no viene en Essentials)
 opencv-python-headless>=4.10
 numpy>=2.0
 Pillow>=11.0
